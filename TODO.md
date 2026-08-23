@@ -12,11 +12,12 @@
 
 ## Next up
 
-- [ ] Confirmation email (Resend) — added 2026-08-23, needs setup before it sends anything:
-  - [ ] Create a Resend account/API key, verify the sending domain (Resend dashboard → Domains)
-  - [ ] Set `RESEND_API_KEY` + `RESEND_FROM` in `.env.local` and in Vercel env vars (see `.env.example`)
+- [ ] Confirmation email (Resend) — wired up 2026-08-23:
+  - [x] Resend domain `joinbuilders.org` verified; sending API key `alpha-recruitment-vercel` created (sending-only, restricted to that domain)
+  - [x] `RESEND_API_KEY`, `RESEND_FROM` (`BUILDERS <hello@joinbuilders.org>`), `RESEND_WEBHOOK_SECRET` set in Vercel (Production + Preview). Not in `.env.local` — set locally if you want emails from `next dev`
+  - [x] Email errors are recorded in Supabase (`public.email_errors`, insert-only RLS like `applications`, advisors clean): send-API failures logged from the app; delivery failures (bounce/complaint/delay/failed/suppressed) POSTed by a Resend webhook to `/api/webhooks/resend` (webhook created in Resend, id `a58d2348…`). Webhook 404s until this branch deploys — Resend retries, and nothing sends emails before then anyway
   - [ ] **Verify the social URLs in `app/api/apply/confirmation-email.ts`** — Instagram/website/LinkedIn are guessed from the `joinbuilders` GitHub org name
-  - [ ] Test: submit the form and check the email lands (sandbox `onboarding@resend.dev` only delivers to the Resend account's own inbox)
+  - [ ] Test: submit the form and check the email lands, then check `public.email_errors` stays empty (try a bounce with `bounced@resend.dev` if curious)
 
 ## Ideas / open decisions (not started)
 
