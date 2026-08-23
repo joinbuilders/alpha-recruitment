@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-serif: var(--font-cormorant);
-  --font-mono: var(--font-jetbrains);
+  --font-serif: "adobe-caslon-pro", serif;
+  --font-mono: var(--font-inter);
   --color-brand: #f43b2b;
   --color-claim: #1cc45e;
   --color-ink: #f3efe6;
