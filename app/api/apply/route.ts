@@ -1,22 +1,7 @@
 import { after } from "next/server";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { getSupabase } from "../supabase";
 import { sendConfirmationEmail } from "./confirmation-email";
-
-// Lazy so a missing env var degrades to a logged error instead of crashing the module.
-let supabase: SupabaseClient | null | undefined;
-function getSupabase() {
-  if (supabase !== undefined) return supabase;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  supabase =
-    url && key
-      ? createClient(url, key, {
-          auth: { persistSession: false, autoRefreshToken: false },
-        })
-      : null;
-  return supabase;
-}
 
 // Mirrors the client-side checks and the DB constraints on public.applications,
 // so anything accepted here can't fail the table's CHECKs.

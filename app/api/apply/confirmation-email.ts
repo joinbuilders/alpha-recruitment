@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 
+import { logEmailError } from "../supabase";
+
 // TODO(brayden): verify these before launch — guessed from the joinbuilders GitHub org.
 // Links with an empty string are left out of the email.
 const LINKS = [
@@ -107,6 +109,11 @@ export async function sendConfirmationEmail(name: string, email: string) {
   const client = getResend();
   if (!client) {
     console.error("RESEND_API_KEY not set; confirmation email not sent to:", email);
+    await logEmailError({
+      recipient: email,
+      event: "send_failed",
+      message: "RESEND_API_KEY not set; confirmation email not sent",
+    });
     return;
   }
 
@@ -126,8 +133,19 @@ export async function sendConfirmationEmail(name: string, email: string) {
     );
     if (error) {
       console.error("confirmation email failed:", error.message);
+      await logEmailError({
+        recipient: email,
+        event: "send_failed",
+        message: error.message,
+        payload: error,
+      });
     }
   } catch (err) {
     console.error("confirmation email failed:", err);
+    await logEmailError({
+      recipient: email,
+      event: "send_failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
