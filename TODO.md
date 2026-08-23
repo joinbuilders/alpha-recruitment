@@ -12,6 +12,11 @@
 ## Next up
 
 - [ ] Review + commit the Supabase wiring changes above (Brayden)
+- [ ] Confirmation email (Resend) — added 2026-08-23, needs setup before it sends anything:
+  - [ ] Create a Resend account/API key, verify the sending domain (Resend dashboard → Domains)
+  - [ ] Set `RESEND_API_KEY` + `RESEND_FROM` in `.env.local` and in Vercel env vars (see `.env.example`)
+  - [ ] **Verify the social URLs in `app/api/apply/confirmation-email.ts`** — Instagram/website/LinkedIn are guessed from the `joinbuilders` GitHub org name
+  - [ ] Test: submit the form and check the email lands (sandbox `onboarding@resend.dev` only delivers to the Resend account's own inbox)
 - [ ] Connect the repo to Vercel (Brayden)
 - [ ] Add env vars in Vercel → Project → Settings → Environment Variables:
   - `SUPABASE_URL=https://rmpeicswaxucmvpflbyd.supabase.co`
