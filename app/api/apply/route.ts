@@ -1,4 +1,7 @@
+import { after } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+import { sendConfirmationEmail } from "./confirmation-email";
 
 // Lazy so a missing env var degrades to a logged error instead of crashing the module.
 let supabase: SupabaseClient | null | undefined;
@@ -51,6 +54,10 @@ export async function POST(request: Request) {
       console.error("supabase insert failed:", error);
     } else {
       stored = true;
+      // Runs after the response is sent, so the applicant never waits on Resend.
+      after(() =>
+        sendConfirmationEmail(application.name, application.email)
+      );
     }
   } else {
     console.error(
