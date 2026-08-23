@@ -3,7 +3,7 @@
 @theme inline {
   --font-serif: var(--font-cormorant);
   --font-mono: var(--font-jetbrains);
-  --color-brand: #f43b2b;
+  --color-brand: #ff2b20;
   --color-claim: #1cc45e;
   --color-ink: #f3efe6;
 }
