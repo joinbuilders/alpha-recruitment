@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-serif: var(--font-cormorant);
+  --font-mono: var(--font-jetbrains);
+  --color-brand: #f43b2b;
+  --color-claim: #1cc45e;
+  --color-ink: #f3efe6;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #050607;
+  color: var(--color-ink);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
