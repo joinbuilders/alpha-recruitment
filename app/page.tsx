@@ -119,7 +119,7 @@ export default function Home() {
           toIntro();
         }
       },
-      isLast ? 1500 : 550
+      isLast ? 1000 : 300
     );
     return () => clearTimeout(t);
   }, [phase, flashIdx, hasFilm, toIntro]);
@@ -212,11 +212,14 @@ export default function Home() {
 
   return (
     <main className="fixed inset-0 overflow-hidden font-mono" onClick={skip}>
+      {/* deep-blue sky gradient; the png's black blends away via screen, keeping its stars */}
+      <div className="fixed inset-0 z-0 bg-[radial-gradient(130%_100%_at_50%_112%,#1d3a66_0%,#13234a_32%,#0b1430_65%,#060b1e_100%)]" />
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(60%_45%_at_78%_8%,rgba(88,62,138,.3),transparent_70%)]" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/night-sky.png"
         alt=""
-        className="fixed inset-0 z-0 h-full w-full object-cover"
+        className="fixed inset-0 z-0 h-full w-full object-cover mix-blend-screen"
       />
       <Starfield className="fixed inset-0 z-0" />
 
@@ -246,7 +249,7 @@ export default function Home() {
         />
       )}
 
-      <div className="pointer-events-none fixed inset-0 z-[2] bg-[radial-gradient(ellipse_at_50%_40%,rgba(0,0,0,0)_0%,rgba(0,0,0,.75)_70%,#000_100%)]" />
+      <div className="pointer-events-none fixed inset-0 z-[2] bg-[radial-gradient(ellipse_at_50%_40%,rgba(4,7,20,0)_0%,rgba(4,7,20,.5)_70%,rgba(4,8,24,.8)_100%)]" />
 
       {/* red bar + unclaimed pill */}
       <div
