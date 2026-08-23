@@ -26,6 +26,7 @@ const KEY_CLAIMED = "bld_claimed";
 const KEY_REDEEMED = "bld_redeemed";
 const KEY_PROGRESS = "bld_progress";
 const KEY_SEEN = "bld_seen";
+const KEY_PENDING = "bld_pending"; // submission not yet confirmed by the server
 
 type Phase =
   | "boot"
@@ -68,8 +69,8 @@ export default function Home() {
   /* ---------- boot: restore device state ---------- */
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("reset")) {
-      [KEY_CLAIMED, KEY_REDEEMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
-        localStorage.removeItem(k)
+      [KEY_CLAIMED, KEY_REDEEMED, KEY_PROGRESS, KEY_SEEN, KEY_PENDING].forEach(
+        (k) => localStorage.removeItem(k)
       );
       window.history.replaceState(null, "", window.location.pathname);
     }
@@ -182,16 +183,60 @@ export default function Home() {
       time: new Date().toISOString(),
     };
     localStorage.setItem(KEY_CLAIMED, JSON.stringify(rec));
+    localStorage.setItem(KEY_PENDING, JSON.stringify(rec)); // delivered by the sync effect
     localStorage.removeItem(KEY_PROGRESS);
     setClaimedRec(rec);
     setPhase("claimed");
-    fetch("/api/apply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rec),
-      keepalive: true,
-    }).catch(() => {});
   };
+
+  /* ---------- deliver the submission, retrying through bad Wi-Fi ----------
+     The claim screen shows instantly; this keeps re-sending (backoff capped at
+     30s, plus whenever the connection comes back or the page is reopened)
+     until the server confirms, so a dropped request isn't lost. The email is
+     deduped server-side, so a retry after a lost response can't double-send. */
+  useEffect(() => {
+    if (phase !== "claimed" && phase !== "redeemed") return;
+    if (!read(KEY_PENDING)) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let delay = 2000;
+
+    const attempt = async () => {
+      const rec = read<ClaimedRec>(KEY_PENDING);
+      if (!rec || stopped) return;
+      let delivered = false;
+      try {
+        const res = await fetch("/api/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rec),
+          keepalive: true,
+        });
+        // 4xx = the payload will never be accepted; don't retry it forever.
+        delivered = res.ok || (res.status >= 400 && res.status < 500);
+      } catch {}
+      if (stopped) return;
+      if (delivered) {
+        localStorage.removeItem(KEY_PENDING);
+      } else {
+        timer = setTimeout(attempt, delay);
+        delay = Math.min(delay * 2, 30000);
+      }
+    };
+
+    const onOnline = () => {
+      if (timer) clearTimeout(timer);
+      delay = 2000;
+      attempt();
+    };
+    window.addEventListener("online", onOnline);
+    attempt();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [phase]);
 
   /* ---------- staff hold-to-redeem ---------- */
   const redeem = useCallback(() => {

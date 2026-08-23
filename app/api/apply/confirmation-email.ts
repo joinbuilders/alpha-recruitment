@@ -14,6 +14,10 @@ const LINKS = [
 // set RESEND_FROM to an address on a verified domain for real sends.
 const FROM = process.env.RESEND_FROM || "BUILDERS <onboarding@resend.dev>";
 
+// Email clients can't load SVGs, so the logo is a PNG served from production
+// (public/builders-logo-email.png, regenerate from builders-logo.svg via sharp).
+const LOGO_URL = "https://www.joinbuilders.org/builders-logo-email.png";
+
 const BRAND_RED = "#ff2b20";
 const INK_DARK = "#040714";
 const BODY_GRAY = "#474a54";
@@ -59,13 +63,8 @@ function buildHtml(firstName: string) {
       <td align="center" style="padding: 56px 24px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; text-align: left;">
           <tr>
-            <td style="padding-bottom: 28px;">
-              <div style="width: 40px; height: 4px; background-color: ${BRAND_RED};"></div>
-            </td>
-          </tr>
-          <tr>
-            <td style="font-family: ${FONT_STACK}; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: ${INK_DARK}; padding-bottom: 32px;">
-              BUILDERS
+            <td style="padding-bottom: 32px;">
+              <img src="${LOGO_URL}" width="142" height="20" alt="BUILDERS" style="display: block; border: 0; width: 142px; height: 20px; font-family: ${FONT_STACK}; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: ${INK_DARK};">
             </td>
           </tr>
           <tr>
