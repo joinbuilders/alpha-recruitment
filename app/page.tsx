@@ -16,7 +16,6 @@ const FLASH_PHRASES = [
 ];
 
 const KEY_CLAIMED = "bld_claimed";
-const KEY_REDEEMED = "bld_redeemed";
 const KEY_PROGRESS = "bld_progress";
 const KEY_SEEN = "bld_seen";
 
@@ -27,8 +26,7 @@ type Phase =
   | "intro"
   | "name"
   | "email"
-  | "claimed"
-  | "redeemed";
+  | "claimed";
 
 type ClaimedRec = { name: string; email: string; time: string };
 
@@ -49,33 +47,24 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [err, setErr] = useState<{ field: "name" | "email"; msg: string } | null>(null);
   const [claimedRec, setClaimedRec] = useState<ClaimedRec | null>(null);
-  const [redeemedAt, setRedeemedAt] = useState<string | null>(null);
   const [clock, setClock] = useState("");
-  const [holding, setHolding] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------- boot: restore device state ---------- */
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("reset")) {
-      [KEY_CLAIMED, KEY_REDEEMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
+      [KEY_CLAIMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
         localStorage.removeItem(k)
       );
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    const redeemed = read<{ time: string }>(KEY_REDEEMED);
     const claimed = read<ClaimedRec>(KEY_CLAIMED);
-    if (claimed) setClaimedRec(claimed);
-    if (redeemed && claimed) {
-      setRedeemedAt(redeemed.time);
-      setPhase("redeemed");
-      return;
-    }
     if (claimed) {
+      setClaimedRec(claimed);
       setPhase("claimed");
       return;
     }
@@ -124,18 +113,22 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [phase, flashIdx, hasFilm, toIntro]);
 
-  /* ---------- focus + progress persistence ---------- */
+  /* ---------- progress persistence ---------- */
   useEffect(() => {
-    if (phase === "name" || phase === "email") {
-      const input = phase === "name" ? nameRef.current : emailRef.current;
-      const t = setTimeout(() => input?.focus(), 450);
-      localStorage.setItem(
-        KEY_PROGRESS,
-        JSON.stringify({ step: phase === "email" ? 2 : 1, name, email })
-      );
-      return () => clearTimeout(t);
-    }
+    if (phase !== "name" && phase !== "email") return;
+    localStorage.setItem(
+      KEY_PROGRESS,
+      JSON.stringify({ step: phase === "email" ? 2 : 1, name, email })
+    );
   }, [phase, name, email]);
+
+  /* ---------- focus the step's field when it opens ---------- */
+  useEffect(() => {
+    if (phase !== "name" && phase !== "email") return;
+    const input = phase === "name" ? nameRef.current : emailRef.current;
+    const t = setTimeout(() => input?.focus(), 450);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   /* ---------- live clock on the green screen ---------- */
   useEffect(() => {
@@ -165,7 +158,7 @@ export default function Home() {
   };
 
   const submit = () => {
-    if (read(KEY_REDEEMED) || read(KEY_CLAIMED)) return; // hard block on double-claim
+    if (read(KEY_CLAIMED)) return; // hard block on double-claim
     if (!name.trim()) return setPhase("name");
     if (!/.+@.+\..+/.test(email.trim())) return flagErr("email", "NEEDS A VALID EMAIL");
     const rec: ClaimedRec = {
@@ -183,25 +176,6 @@ export default function Home() {
       body: JSON.stringify(rec),
       keepalive: true,
     }).catch(() => {});
-  };
-
-  /* ---------- staff hold-to-redeem ---------- */
-  const redeem = useCallback(() => {
-    setHolding(false);
-    const time = new Date().toISOString();
-    localStorage.setItem(KEY_REDEEMED, JSON.stringify({ time }));
-    setRedeemedAt(time);
-    setPhase("redeemed");
-  }, []);
-
-  const holdStart = (e: React.PointerEvent) => {
-    e.preventDefault();
-    setHolding(true);
-    holdTimer.current = setTimeout(redeem, 900);
-  };
-  const holdEnd = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    setHolding(false);
   };
 
   const skip = () => {
@@ -281,88 +255,106 @@ export default function Home() {
           </h1>
           <button
             onClick={() => setPhase("name")}
-            className="mt-11 flex cursor-pointer items-center gap-3 border-b border-transparent pb-1 text-sm tracking-[.2em] transition hover:border-brand hover:text-white"
+            className="mt-11 h-[52px] cursor-pointer rounded-[6px] bg-brand px-10 text-sm font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.98]"
           >
-            BEGIN APPLICATION <span className="text-brand">→</span>
+            BEGIN APPLICATION
           </button>
         </section>
       )}
 
       {/* ---------- question 1: name ---------- */}
       {phase === "name" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-6 text-center">
-          <h2 className="mb-10 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
+        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-5 text-center">
+          <h2 className="mb-9 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
             What should we call you?
           </h2>
-          <input
-            ref={nameRef}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && nextFromName()}
-            placeholder="Full name"
-            autoComplete="name"
-            enterKeyHint="next"
-            className={`w-full max-w-[640px] border-b bg-transparent px-1 py-3.5 text-center text-[clamp(18px,2.4vw,26px)] text-white outline-none transition-colors placeholder:text-ink/25 ${
-              err?.field === "name"
-                ? "border-brand"
-                : "border-ink/30 focus:border-white"
-            }`}
-          />
-          <button
-            onClick={nextFromName}
-            className="mt-9 flex cursor-pointer items-center gap-3 border-b border-transparent pb-1 text-sm tracking-[.2em] transition hover:border-brand hover:text-white"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              nextFromName();
+            }}
+            className="w-full max-w-[704px] rounded-[6px] bg-[#0d0f0d] px-5 pb-8 pt-7 text-left sm:px-[30px] sm:pb-10 sm:pt-8"
           >
-            NEXT <span className="text-brand">→</span>
-          </button>
-          <p className="mt-5 min-h-[17px] text-[11px] tracking-[.15em] text-brand">
-            {err?.field === "name" ? err.msg : ""}
-          </p>
+            <label
+              htmlFor="name"
+              className="block text-[clamp(16px,1.7vw,22px)] font-bold text-white"
+            >
+              Full Name
+            </label>
+            <input
+              id="name"
+              ref={nameRef}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full name"
+              autoComplete="name"
+              enterKeyHint="next"
+              className={`mt-2.5 h-[53px] w-full rounded-[6px] border-2 bg-[rgba(217,217,217,0.91)] px-4 text-[17px] text-[#0d0f0d] shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] outline-none transition-colors placeholder:text-black/35 focus:bg-white ${
+                err?.field === "name" ? "border-brand" : "border-[#f0f0f0]"
+              }`}
+            />
+            <button
+              type="submit"
+              className="mt-10 h-[52px] w-full cursor-pointer rounded-[6px] bg-brand text-[15px] font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.99]"
+            >
+              NEXT
+            </button>
+            <p className="mt-4 min-h-[17px] text-center text-[11px] tracking-[.15em] text-brand">
+              {err?.field === "name" ? err.msg : ""}
+            </p>
+          </form>
         </section>
       )}
 
       {/* ---------- question 2: email ---------- */}
       {phase === "email" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-6 text-center">
-          <h2 className="mb-10 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
+        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-5 text-center">
+          <h2 className="mb-9 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
             Where do we reach you?
           </h2>
-          <input
-            ref={emailRef}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder="name.#@osu.edu"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            enterKeyHint="go"
-            className={`w-full max-w-[640px] border-b bg-transparent px-1 py-3.5 text-center text-[clamp(18px,2.4vw,26px)] text-white outline-none transition-colors placeholder:text-ink/25 ${
-              err?.field === "email"
-                ? "border-brand"
-                : "border-ink/30 focus:border-white"
-            }`}
-          />
-          <button
-            onClick={submit}
-            className="mt-9 flex cursor-pointer items-center gap-3 border-b border-transparent pb-1 text-sm tracking-[.2em] transition hover:border-brand hover:text-white"
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
+            }}
+            className="w-full max-w-[704px] rounded-[6px] bg-[#0d0f0d] px-5 pb-8 pt-7 text-left sm:px-[30px] sm:pb-10 sm:pt-8"
           >
-            SUBMIT <span className="text-brand">→</span>
-          </button>
-          <p className="mt-5 min-h-[17px] text-[11px] tracking-[.15em] text-brand">
-            {err?.field === "email" ? err.msg : ""}
-          </p>
+            <label
+              htmlFor="email"
+              className="block text-[clamp(16px,1.7vw,22px)] font-bold text-white"
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              ref={emailRef}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name.#@osu.edu"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              enterKeyHint="go"
+              className={`mt-2.5 h-[53px] w-full rounded-[6px] border-2 bg-[rgba(217,217,217,0.91)] px-4 text-[17px] text-[#0d0f0d] shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] outline-none transition-colors placeholder:text-black/35 focus:bg-white ${
+                err?.field === "email" ? "border-brand" : "border-[#f0f0f0]"
+              }`}
+            />
+            <button
+              type="submit"
+              className="mt-10 h-[52px] w-full cursor-pointer rounded-[6px] bg-brand text-[15px] font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.99]"
+            >
+              SUBMIT
+            </button>
+            <p className="mt-4 min-h-[17px] text-center text-[11px] tracking-[.15em] text-brand">
+              {err?.field === "email" ? err.msg : ""}
+            </p>
+          </form>
         </section>
       )}
 
       {/* ---------- green: filled out, item owed ---------- */}
       {phase === "claimed" && (
-        <section
-          onPointerDown={holdStart}
-          onPointerUp={holdEnd}
-          onPointerCancel={holdEnd}
-          onPointerLeave={holdEnd}
-          className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] touch-none select-none flex-col items-center justify-center bg-claim px-6 text-center text-white [-webkit-touch-callout:none]"
-        >
+        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center bg-claim px-6 text-center text-white">
           <div className="pointer-events-none absolute inset-0 animate-[glow_2.4s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,.28),transparent_60%)]" />
           <div className="mb-8 flex h-[88px] w-[88px] items-center justify-center rounded-full border-4 border-white text-[44px]">
             ✓
@@ -378,40 +370,6 @@ export default function Home() {
             <span>LIVE</span>
             <span>{clock}</span>
           </div>
-          <p className="mt-9 text-[10px] tracking-[.28em] text-white/40">
-            STAFF · HOLD SCREEN TO REDEEM
-          </p>
-          {/* green fades to black under the staff member's thumb */}
-          <div
-            className={`pointer-events-none absolute inset-0 bg-black ${
-              holding
-                ? "opacity-100 transition-opacity duration-[900ms] ease-linear"
-                : "opacity-0 transition-opacity duration-150"
-            }`}
-          />
-        </section>
-      )}
-
-      {/* ---------- dark: already got their item ---------- */}
-      {phase === "redeemed" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-6 text-center">
-          <div className="mb-8 flex h-[88px] w-[88px] items-center justify-center rounded-full border-[3px] border-claim text-[42px] text-claim">
-            ✓
-          </div>
-          <p className="font-serif text-[clamp(48px,10vw,120px)] leading-[.98] text-claim">
-            Already <em className="italic">claimed.</em>
-          </p>
-          <p className="mt-6 text-[clamp(14px,2.2vw,20px)] uppercase tracking-[.22em] text-white">
-            {claimedRec?.name}
-          </p>
-          {redeemedAt && (
-            <p className="mt-3 text-xs tracking-[.2em] text-ink/45">
-              {new Date(redeemedAt).toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
         </section>
       )}
     </main>
