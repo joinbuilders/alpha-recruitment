@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
-  variable: "--font-cormorant",
-});
-
-const jetbrains = JetBrains_Mono({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-jetbrains",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +24,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${cormorant.variable} ${jetbrains.variable} font-mono antialiased`}>
+      <link rel="stylesheet" href="https://use.typekit.net/kfv5cnk.css" />
+      <body className={`${inter.variable} font-mono antialiased`}>
         {children}
       </body>
     </html>
