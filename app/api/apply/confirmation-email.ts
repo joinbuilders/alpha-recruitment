@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 import { logEmailError } from "../supabase";
+import { LOGO_PNG_BASE64 } from "./logo-png";
 
 // TODO(brayden): verify these before launch — guessed from the joinbuilders GitHub org.
 // Links with an empty string are left out of the email.
@@ -14,9 +15,9 @@ const LINKS = [
 // set RESEND_FROM to an address on a verified domain for real sends.
 const FROM = process.env.RESEND_FROM || "BUILDERS <onboarding@resend.dev>";
 
-// Email clients can't load SVGs, so the logo is a PNG served from production
-// (public/builders-logo-email.png, regenerate from builders-logo.svg via sharp).
-const LOGO_URL = "https://www.joinbuilders.org/builders-logo-email.png";
+// Email clients can't load SVGs, so the logo is a PNG sent as an inline
+// attachment and referenced via cid: — self-contained, no hosted asset needed.
+const LOGO_CID = "builders-logo";
 
 const BRAND_RED = "#ff2b20";
 const INK_DARK = "#040714";
@@ -64,7 +65,7 @@ function buildHtml(firstName: string) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; text-align: left;">
           <tr>
             <td style="padding-bottom: 32px;">
-              <img src="${LOGO_URL}" width="142" height="20" alt="BUILDERS" style="display: block; border: 0; width: 142px; height: 20px; font-family: ${FONT_STACK}; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: ${INK_DARK};">
+              <img src="cid:${LOGO_CID}" width="142" height="20" alt="BUILDERS" style="display: block; border: 0; width: 142px; height: 20px; font-family: ${FONT_STACK}; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: ${INK_DARK};">
             </td>
           </tr>
           <tr>
@@ -126,6 +127,14 @@ export async function sendConfirmationEmail(name: string, email: string) {
         subject: "You're on the list — BUILDERS",
         html: buildHtml(firstName),
         text: buildText(firstName),
+        attachments: [
+          {
+            content: LOGO_PNG_BASE64,
+            filename: "builders-logo.png",
+            contentType: "image/png",
+            contentId: LOGO_CID,
+          },
+        ],
       },
       // Dedupes repeat submissions from the same address for 24h.
       { idempotencyKey: `application-confirmation/${email.toLowerCase().slice(0, 220)}` }
