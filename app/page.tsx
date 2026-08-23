@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type RefObject,
+} from "react";
 import Starfield from "@/components/Starfield";
 import BuildersLogo from "@/components/BuildersLogo";
 
@@ -51,7 +59,6 @@ export default function Home() {
 
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------- boot: restore device state ---------- */
   useEffect(() => {
@@ -146,21 +153,18 @@ export default function Home() {
     return () => clearInterval(t);
   }, [phase]);
 
-  const flagErr = (field: "name" | "email", msg: string) => {
-    setErr({ field, msg });
-    if (errTimer.current) clearTimeout(errTimer.current);
-    errTimer.current = setTimeout(() => setErr(null), 1600);
-  };
-
+  // errors stay visible until the visitor types again
   const nextFromName = () => {
-    if (!name.trim()) return flagErr("name", "WE NEED A NAME");
+    if (!name.trim())
+      return setErr({ field: "name", msg: "We need a name." });
     setPhase("email");
   };
 
   const submit = () => {
     if (read(KEY_CLAIMED)) return; // hard block on double-claim
     if (!name.trim()) return setPhase("name");
-    if (!/.+@.+\..+/.test(email.trim())) return flagErr("email", "NEEDS A VALID EMAIL");
+    if (!/.+@.+\..+/.test(email.trim()))
+      return setErr({ field: "email", msg: "That email doesn't look right." });
     const rec: ClaimedRec = {
       name: name.trim(),
       email: email.trim(),
@@ -264,92 +268,52 @@ export default function Home() {
 
       {/* ---------- question 1: name ---------- */}
       {phase === "name" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-5 text-center">
-          <h2 className="mb-9 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
-            What should we call you?
-          </h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              nextFromName();
-            }}
-            className="w-full max-w-[704px] rounded-[6px] bg-[#0d0f0d] px-5 pb-8 pt-7 text-left sm:px-[30px] sm:pb-10 sm:pt-8"
-          >
-            <label
-              htmlFor="name"
-              className="block text-[clamp(16px,1.7vw,22px)] font-bold text-white"
-            >
-              Full Name
-            </label>
-            <input
-              id="name"
-              ref={nameRef}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-              autoComplete="name"
-              enterKeyHint="next"
-              className={`mt-2.5 h-[53px] w-full rounded-[6px] border-2 bg-[rgba(217,217,217,0.91)] px-4 text-[17px] text-[#0d0f0d] shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] outline-none transition-colors placeholder:text-black/35 focus:bg-white ${
-                err?.field === "name" ? "border-brand" : "border-[#f0f0f0]"
-              }`}
-            />
-            <button
-              type="submit"
-              className="mt-10 h-[52px] w-full cursor-pointer rounded-[6px] bg-brand text-[15px] font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.99]"
-            >
-              NEXT
-            </button>
-            <p className="mt-4 min-h-[17px] text-center text-[11px] tracking-[.15em] text-brand">
-              {err?.field === "name" ? err.msg : ""}
-            </p>
-          </form>
-        </section>
+        <QuestionStep
+          step={1}
+          title="What should we call you?"
+          label="Full Name"
+          buttonText="NEXT"
+          errMsg={err?.field === "name" ? err.msg : null}
+          onSubmit={nextFromName}
+          inputRef={nameRef}
+          inputProps={{
+            id: "name",
+            value: name,
+            onChange: (e) => {
+              setName(e.target.value);
+              setErr(null);
+            },
+            placeholder: "Jane Smith",
+            autoComplete: "name",
+            enterKeyHint: "next",
+          }}
+        />
       )}
 
       {/* ---------- question 2: email ---------- */}
       {phase === "email" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-5 text-center">
-          <h2 className="mb-9 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
-            Where do we reach you?
-          </h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
-            className="w-full max-w-[704px] rounded-[6px] bg-[#0d0f0d] px-5 pb-8 pt-7 text-left sm:px-[30px] sm:pb-10 sm:pt-8"
-          >
-            <label
-              htmlFor="email"
-              className="block text-[clamp(16px,1.7vw,22px)] font-bold text-white"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              ref={emailRef}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name.#@osu.edu"
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              enterKeyHint="go"
-              className={`mt-2.5 h-[53px] w-full rounded-[6px] border-2 bg-[rgba(217,217,217,0.91)] px-4 text-[17px] text-[#0d0f0d] shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] outline-none transition-colors placeholder:text-black/35 focus:bg-white ${
-                err?.field === "email" ? "border-brand" : "border-[#f0f0f0]"
-              }`}
-            />
-            <button
-              type="submit"
-              className="mt-10 h-[52px] w-full cursor-pointer rounded-[6px] bg-brand text-[15px] font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.99]"
-            >
-              SUBMIT
-            </button>
-            <p className="mt-4 min-h-[17px] text-center text-[11px] tracking-[.15em] text-brand">
-              {err?.field === "email" ? err.msg : ""}
-            </p>
-          </form>
-        </section>
+        <QuestionStep
+          step={2}
+          title="Where do we reach you?"
+          label="Email"
+          buttonText="SUBMIT"
+          errMsg={err?.field === "email" ? err.msg : null}
+          onSubmit={submit}
+          inputRef={emailRef}
+          inputProps={{
+            id: "email",
+            type: "email",
+            value: email,
+            onChange: (e) => {
+              setEmail(e.target.value);
+              setErr(null);
+            },
+            placeholder: "name.#@osu.edu",
+            autoComplete: "email",
+            inputMode: "email",
+            enterKeyHint: "go",
+          }}
+        />
       )}
 
       {/* ---------- green: filled out, item owed ---------- */}
@@ -373,5 +337,71 @@ export default function Home() {
         </section>
       )}
     </main>
+  );
+}
+
+/* ---------- one question step: serif headline + glass card ---------- */
+function QuestionStep({
+  step,
+  title,
+  label,
+  buttonText,
+  errMsg,
+  onSubmit,
+  inputRef,
+  inputProps,
+}: {
+  step: 1 | 2;
+  title: string;
+  label: string;
+  buttonText: string;
+  errMsg: string | null;
+  onSubmit: () => void;
+  inputRef: RefObject<HTMLInputElement | null>;
+  inputProps: ComponentProps<"input">;
+}) {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit();
+  };
+
+  return (
+    <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-5 text-center">
+      <h2 className="mb-9 max-w-[820px] font-serif text-[clamp(32px,5vw,56px)] leading-[1.1] text-white">
+        {title}
+      </h2>
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-[520px] rounded-[14px] border border-white/10 bg-[#0b1430]/60 px-6 pb-7 pt-6 text-left shadow-[0_24px_60px_rgba(0,0,0,.45)] backdrop-blur-md sm:px-8 sm:pb-8 sm:pt-7"
+      >
+        <div className="flex items-baseline justify-between">
+          <label
+            htmlFor={inputProps.id}
+            className="text-[12px] font-medium uppercase tracking-[.18em] text-white/60"
+          >
+            {label}
+          </label>
+          <span className="text-[11px] tracking-[.2em] text-white/35">
+            {step} / 2
+          </span>
+        </div>
+        <input
+          ref={inputRef}
+          {...inputProps}
+          className={`mt-3 h-[50px] w-full rounded-[8px] border bg-white/5 px-4 text-[17px] text-white caret-brand outline-none transition-colors placeholder:text-white/30 focus:border-white/40 focus:bg-white/10 ${
+            errMsg ? "border-brand" : "border-white/15"
+          }`}
+        />
+        <p className="mt-2 min-h-[18px] text-left text-[12.5px] text-brand">
+          {errMsg ?? ""}
+        </p>
+        <button
+          type="submit"
+          className="mt-3 h-[48px] w-full cursor-pointer rounded-[8px] bg-brand text-[13px] font-bold tracking-[.15em] text-white transition hover:brightness-110 active:scale-[.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+        >
+          {buttonText}
+        </button>
+      </form>
+    </section>
   );
 }
