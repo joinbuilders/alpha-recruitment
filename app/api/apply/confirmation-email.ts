@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 import { logEmailError } from "../supabase";
+import { BUILDERS_LOGO_PNG_BASE64 } from "./builders-logo-email";
 
 // TODO(brayden): verify these before launch — guessed from the joinbuilders GitHub org.
 // Links with an empty string are left out of the email.
@@ -53,19 +54,14 @@ function buildHtml(firstName: string) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body style="margin: 0; padding: 0; background-color: #ffffff;">
-  <div style="display: none; max-height: 0; overflow: hidden;">You&rsquo;re on our list &mdash; more information is on the way.</div>
+  <div style="display: none; max-height: 0; overflow: hidden;">You&rsquo;re on our list. More information is on the way.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
     <tr>
       <td align="center" style="padding: 56px 24px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; text-align: left;">
           <tr>
-            <td style="padding-bottom: 28px;">
-              <div style="width: 40px; height: 4px; background-color: ${BRAND_RED};"></div>
-            </td>
-          </tr>
-          <tr>
-            <td style="font-family: ${FONT_STACK}; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: ${INK_DARK}; padding-bottom: 32px;">
-              BUILDERS
+            <td style="padding-bottom: 32px;">
+              <img src="cid:builders-logo" width="170" alt="BUILDERS" style="display: block; width: 170px; height: auto; border: 0;">
             </td>
           </tr>
           <tr>
@@ -75,7 +71,7 @@ function buildHtml(firstName: string) {
           </tr>
           <tr>
             <td style="font-family: ${FONT_STACK}; font-size: 16px; line-height: 1.6; color: ${BODY_GRAY}; padding-bottom: 32px;">
-              Hey ${escapeHtml(firstName)} &mdash; thanks for applying. We&rsquo;ve got your details, and we&rsquo;ll send more information soon. Keep an eye on your inbox.
+              Hey ${escapeHtml(firstName)}, thanks for applying. We&rsquo;ve got your details, and we&rsquo;ll send more information soon. Keep an eye on your inbox.
             </td>
           </tr>
           <tr>
@@ -85,7 +81,7 @@ function buildHtml(firstName: string) {
           </tr>
           <tr>
             <td style="font-family: ${FONT_STACK}; font-size: 12px; color: #9a9ca3;">
-              &copy; ${new Date().getFullYear()} BUILDERS &mdash; you&rsquo;re receiving this because you applied.
+              &copy; ${new Date().getFullYear()} BUILDERS. You&rsquo;re receiving this because you applied.
             </td>
           </tr>
         </table>
@@ -98,11 +94,11 @@ function buildHtml(firstName: string) {
 
 function buildText(firstName: string) {
   const links = LINKS.map((link) => `${link.label}: ${link.url}`).join("\n");
-  return `Hey ${firstName} — thanks for applying. You're on our list, and we'll send more information soon.
+  return `Hey ${firstName}, thanks for applying. You're on our list, and we'll send more information soon.
 
 ${links}
 
-© ${new Date().getFullYear()} BUILDERS — you're receiving this because you applied.`;
+© ${new Date().getFullYear()} BUILDERS. You're receiving this because you applied.`;
 }
 
 export async function sendConfirmationEmail(name: string, email: string) {
@@ -124,9 +120,17 @@ export async function sendConfirmationEmail(name: string, email: string) {
       {
         from: FROM,
         to: [email],
-        subject: "You're on the list — BUILDERS",
+        subject: "You're on the list | BUILDERS",
         html: buildHtml(firstName),
         text: buildText(firstName),
+        // Inline logo referenced from the HTML as cid:builders-logo.
+        attachments: [
+          {
+            filename: "builders-logo.png",
+            content: BUILDERS_LOGO_PNG_BASE64,
+            contentId: "builders-logo",
+          },
+        ],
       },
       // Dedupes repeat submissions from the same address for 24h.
       { idempotencyKey: `application-confirmation/${email.toLowerCase().slice(0, 220)}` }
