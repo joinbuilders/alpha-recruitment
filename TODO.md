@@ -12,7 +12,11 @@
 
 ## Next up
 
-- (nothing blocking — site is live)
+- [ ] Confirmation email (Resend) — added 2026-08-23, needs setup before it sends anything:
+  - [ ] Create a Resend account/API key, verify the sending domain (Resend dashboard → Domains)
+  - [ ] Set `RESEND_API_KEY` + `RESEND_FROM` in `.env.local` and in Vercel env vars (see `.env.example`)
+  - [ ] **Verify the social URLs in `app/api/apply/confirmation-email.ts`** — Instagram/website/LinkedIn are guessed from the `joinbuilders` GitHub org name
+  - [ ] Test: submit the form and check the email lands (sandbox `onboarding@resend.dev` only delivers to the Resend account's own inbox)
 
 ## Ideas / open decisions (not started)
 

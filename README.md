@@ -25,6 +25,8 @@ function doPost(e) {
 
 Deploy in Apps Script as Web app → execute as **Me** → access **Anyone**, and put the `/exec` URL in `SUBMIT_WEBHOOK_URL`. Without it, submissions are only logged server-side.
 
+After a successful submission the applicant also gets a "you're on the list" confirmation email via Resend (`app/api/apply/confirmation-email.ts`). Requires `RESEND_API_KEY` and `RESEND_FROM` (see `.env.example`); without them the email is skipped and the submission still succeeds.
+
 ## Assets
 
 - `public/film.mp4` — the film (plays after the flash text; skippable by tapping)

@@ -360,7 +360,7 @@ export default function Home() {
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             aria-hidden="true"
-            className="mb-8 h-[88px] w-[88px]"
+            className="mb-8 h-[clamp(54px,11.5vw,132px)] w-[clamp(54px,11.5vw,132px)]"
           >
             <desc>Form Validation Check Circle Streamline Icon: https://streamlinehq.com</desc>
             <g>
@@ -378,13 +378,13 @@ export default function Home() {
               />
             </g>
           </svg>
-          <p className="font-serif text-[clamp(60px,13vw,150px)] leading-[.95]">
+          <p className="font-serif text-[clamp(54px,11.5vw,132px)] leading-[.95]">
             You&apos;re <em className="italic">in.</em>
           </p>
           <p className="mt-6 text-[clamp(15px,2.5vw,22px)] uppercase tracking-[.22em]">
             {claimedRec?.name}
           </p>
-          <div className="mt-8 flex items-center gap-2.5 text-[13px] tracking-[.2em]">
+          <div className="mt-8 flex items-center gap-2.5 text-[clamp(15px,2.5vw,22px)] tracking-[.2em]">
             <span className="inline-block h-2 w-2 animate-[blink_1.2s_infinite] rounded-full bg-white" />
             <span>LIVE</span>
             <span>{clock}</span>
