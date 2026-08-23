@@ -396,8 +396,9 @@ export default function Home() {
             <span>LIVE</span>
             <span>{clock}</span>
           </div>
-          <p className="mt-9 text-[10px] tracking-[.28em] text-white/40">
-            STAFF · HOLD SCREEN TO REDEEM
+          <p className="mt-9 max-w-[34ch] text-[11px] leading-relaxed tracking-[.24em] text-white/80">
+            DO NOT HOLD DOWN ON THIS SCREEN — BRING IT TO A BUILDERS TEAM
+            MEMBER TO REDEEM FOR AN ENERGY DRINK
           </p>
           {/* green fades to black under the staff member's thumb */}
           <div
