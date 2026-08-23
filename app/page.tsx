@@ -16,7 +16,6 @@ const FLASH_PHRASES = [
 ];
 
 const KEY_CLAIMED = "bld_claimed";
-const KEY_REDEEMED = "bld_redeemed";
 const KEY_PROGRESS = "bld_progress";
 const KEY_SEEN = "bld_seen";
 
@@ -27,8 +26,7 @@ type Phase =
   | "intro"
   | "name"
   | "email"
-  | "claimed"
-  | "redeemed";
+  | "claimed";
 
 type ClaimedRec = { name: string; email: string; time: string };
 
@@ -49,33 +47,24 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [err, setErr] = useState<{ field: "name" | "email"; msg: string } | null>(null);
   const [claimedRec, setClaimedRec] = useState<ClaimedRec | null>(null);
-  const [redeemedAt, setRedeemedAt] = useState<string | null>(null);
   const [clock, setClock] = useState("");
-  const [holding, setHolding] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------- boot: restore device state ---------- */
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("reset")) {
-      [KEY_CLAIMED, KEY_REDEEMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
+      [KEY_CLAIMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
         localStorage.removeItem(k)
       );
       window.history.replaceState(null, "", window.location.pathname);
     }
 
-    const redeemed = read<{ time: string }>(KEY_REDEEMED);
     const claimed = read<ClaimedRec>(KEY_CLAIMED);
-    if (claimed) setClaimedRec(claimed);
-    if (redeemed && claimed) {
-      setRedeemedAt(redeemed.time);
-      setPhase("redeemed");
-      return;
-    }
     if (claimed) {
+      setClaimedRec(claimed);
       setPhase("claimed");
       return;
     }
@@ -165,7 +154,7 @@ export default function Home() {
   };
 
   const submit = () => {
-    if (read(KEY_REDEEMED) || read(KEY_CLAIMED)) return; // hard block on double-claim
+    if (read(KEY_CLAIMED)) return; // hard block on double-claim
     if (!name.trim()) return setPhase("name");
     if (!/.+@.+\..+/.test(email.trim())) return flagErr("email", "NEEDS A VALID EMAIL");
     const rec: ClaimedRec = {
@@ -183,25 +172,6 @@ export default function Home() {
       body: JSON.stringify(rec),
       keepalive: true,
     }).catch(() => {});
-  };
-
-  /* ---------- staff hold-to-redeem ---------- */
-  const redeem = useCallback(() => {
-    setHolding(false);
-    const time = new Date().toISOString();
-    localStorage.setItem(KEY_REDEEMED, JSON.stringify({ time }));
-    setRedeemedAt(time);
-    setPhase("redeemed");
-  }, []);
-
-  const holdStart = (e: React.PointerEvent) => {
-    e.preventDefault();
-    setHolding(true);
-    holdTimer.current = setTimeout(redeem, 900);
-  };
-  const holdEnd = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    setHolding(false);
   };
 
   const skip = () => {
@@ -353,13 +323,7 @@ export default function Home() {
 
       {/* ---------- green: filled out, item owed ---------- */}
       {phase === "claimed" && (
-        <section
-          onPointerDown={holdStart}
-          onPointerUp={holdEnd}
-          onPointerCancel={holdEnd}
-          onPointerLeave={holdEnd}
-          className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] touch-none select-none flex-col items-center justify-center bg-claim px-6 text-center text-white [-webkit-touch-callout:none]"
-        >
+        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center bg-claim px-6 text-center text-white">
           <div className="pointer-events-none absolute inset-0 animate-[glow_2.4s_ease-in-out_infinite] bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,.28),transparent_60%)]" />
           <div className="mb-8 flex h-[88px] w-[88px] items-center justify-center rounded-full border-4 border-white text-[44px]">
             ✓
@@ -375,40 +339,6 @@ export default function Home() {
             <span>LIVE</span>
             <span>{clock}</span>
           </div>
-          <p className="mt-9 text-[10px] tracking-[.28em] text-white/40">
-            STAFF · HOLD SCREEN TO REDEEM
-          </p>
-          {/* green fades to black under the staff member's thumb */}
-          <div
-            className={`pointer-events-none absolute inset-0 bg-black ${
-              holding
-                ? "opacity-100 transition-opacity duration-[900ms] ease-linear"
-                : "opacity-0 transition-opacity duration-150"
-            }`}
-          />
-        </section>
-      )}
-
-      {/* ---------- dark: already got their item ---------- */}
-      {phase === "redeemed" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.5s_ease] flex-col items-center justify-center px-6 text-center">
-          <div className="mb-8 flex h-[88px] w-[88px] items-center justify-center rounded-full border-[3px] border-claim text-[42px] text-claim">
-            ✓
-          </div>
-          <p className="font-serif text-[clamp(48px,10vw,120px)] leading-[.98] text-claim">
-            Already <em className="italic">claimed.</em>
-          </p>
-          <p className="mt-6 text-[clamp(14px,2.2vw,20px)] uppercase tracking-[.22em] text-white">
-            {claimedRec?.name}
-          </p>
-          {redeemedAt && (
-            <p className="mt-3 text-xs tracking-[.2em] text-ink/45">
-              {new Date(redeemedAt).toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
         </section>
       )}
     </main>
