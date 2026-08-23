@@ -247,15 +247,15 @@ export default function Home() {
 
       {/* ---------- intro / start of application ---------- */}
       {phase === "intro" && (
-        <section className="absolute inset-0 z-10 flex animate-[rise_0.6s_ease] flex-col items-center justify-center px-6 text-center">
-          <h1 className="font-serif text-[clamp(44px,8vw,92px)] leading-[1.05] text-white">
+        <section className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center">
+          <h1 className="animate-[fadein_1.1s_ease_both] font-serif text-[clamp(44px,8vw,92px)] leading-[1.05] text-white">
             Your building
             <br />
             starts <em className="italic">today.</em>
           </h1>
           <button
             onClick={() => setPhase("name")}
-            className="mt-11 h-[52px] cursor-pointer rounded-[6px] bg-brand px-10 text-sm font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.98]"
+            className="mt-11 h-[52px] animate-[fadein_1.1s_ease_0.45s_both] cursor-pointer rounded-[6px] bg-brand px-10 text-sm font-bold tracking-[.2em] text-white shadow-[6px_6px_15px_0px_rgba(0,9,6,0.1)] transition hover:brightness-110 active:scale-[.98]"
           >
             BEGIN APPLICATION
           </button>
