@@ -12,7 +12,6 @@ const FLASH_PHRASES = [
   "Speaker Series",
   "Venture Capital",
   "Startup Internships",
-  "Ordinary was never the goal.",
 ];
 
 const KEY_CLAIMED = "bld_claimed";
@@ -48,6 +47,7 @@ export default function Home() {
   const [err, setErr] = useState<{ field: "name" | "email"; msg: string } | null>(null);
   const [claimedRec, setClaimedRec] = useState<ClaimedRec | null>(null);
   const [clock, setClock] = useState("");
+  const [filmStarted, setFilmStarted] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -94,21 +94,21 @@ export default function Home() {
     setPhase("intro");
   }, []);
 
-  /* ---------- flash sequence ---------- */
+  /* ---------- flash sequence: phrases, then the logo ---------- */
   useEffect(() => {
     if (phase !== "flash") return;
-    const isLast = flashIdx === FLASH_PHRASES.length - 1;
+    const isLogo = flashIdx === FLASH_PHRASES.length;
     const t = setTimeout(
       () => {
-        if (!isLast) {
+        if (!isLogo) {
           setFlashIdx((i) => i + 1);
         } else if (hasFilm) {
-          setPhase("film");
+          setPhase("film"); // logo stays up and fades over the film's opening
         } else {
           toIntro();
         }
       },
-      isLast ? 1000 : 300
+      isLogo ? (hasFilm ? 800 : 1600) : 300
     );
     return () => clearTimeout(t);
   }, [phase, flashIdx, hasFilm, toIntro]);
@@ -184,6 +184,10 @@ export default function Home() {
 
   const barWidth = phase === "name" ? "50%" : phase === "email" ? "100%" : "0%";
 
+  // hidden through boot/flash; fades in as the centered logo fades out over the film
+  const cornerLogoIn =
+    phase === "film" ? filmStarted : phase !== "boot" && phase !== "flash";
+
   return (
     <main className="fixed inset-0 overflow-hidden font-mono" onClick={skip}>
       {/* deep-blue sky gradient; the png's black blends away via screen, keeping its stars */}
@@ -204,6 +208,7 @@ export default function Home() {
           muted
           autoPlay
           playsInline
+          onPlay={() => setFilmStarted(true)}
           onEnded={toIntro}
           onError={() => {
             setHasFilm(false);
@@ -231,18 +236,41 @@ export default function Home() {
         style={{ width: barWidth }}
       />
 
-      <BuildersLogo className="fixed bottom-6 left-7 z-20 h-[18px] w-auto text-white" />
+      <BuildersLogo
+        className={`fixed bottom-6 left-7 z-20 h-[18px] w-auto text-white transition-opacity duration-[2500ms] ${
+          cornerLogoIn ? "opacity-100" : "opacity-0"
+        }`}
+      />
 
       {/* ---------- flash text ---------- */}
       {phase === "flash" && (
         <section className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
-          <p
-            key={flashIdx}
-            className="text-[clamp(22px,4.5vw,44px)] font-medium tracking-wide text-white"
-          >
-            {FLASH_PHRASES[flashIdx]}
-          </p>
+          {flashIdx < FLASH_PHRASES.length ? (
+            <p
+              key={flashIdx}
+              className="text-[clamp(22px,4.5vw,44px)] font-medium tracking-wide text-white"
+            >
+              {FLASH_PHRASES[flashIdx]}
+            </p>
+          ) : (
+            <BuildersLogo
+              className={`h-[clamp(28px,5vw,52px)] w-auto text-white ${
+                hasFilm ? "" : "animate-[fadeout_0.9s_ease_0.7s_both]"
+              }`}
+            />
+          )}
         </section>
+      )}
+
+      {/* the logo lingers over the film's first 2.5s, slowly fading away */}
+      {phase === "film" && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6">
+          <BuildersLogo
+            className={`h-[clamp(28px,5vw,52px)] w-auto text-white ${
+              filmStarted ? "animate-[fadeout_2.5s_ease_both]" : ""
+            }`}
+          />
+        </div>
       )}
 
       {/* ---------- intro / start of application ---------- */}
