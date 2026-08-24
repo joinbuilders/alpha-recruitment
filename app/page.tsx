@@ -60,6 +60,7 @@ export default function Home() {
   const [clock, setClock] = useState("");
   const [filmStarted, setFilmStarted] = useState(false);
   const [holding, setHolding] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -171,7 +172,8 @@ export default function Home() {
     setPhase("email");
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
     if (read(KEY_REDEEMED) || read(KEY_CLAIMED)) return; // hard block on double-claim
     if (!name.trim()) return setPhase("name");
     if (!/.+@.+\..+/.test(email.trim()))
@@ -181,16 +183,32 @@ export default function Home() {
       email: email.trim(),
       time: new Date().toISOString(),
     };
+    // Ask the server first so an email that already claimed on another device
+    // is caught; if the server is unreachable, claim optimistically — better a
+    // rare double hand-out than an applicant stranded on venue Wi-Fi.
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rec),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.status === 409) {
+        setSubmitting(false);
+        return setErr({
+          field: "email",
+          msg: "That email already claimed — see a Builders team member.",
+        });
+      }
+    } catch {
+      // offline or timed out — fall through to the optimistic claim
+    }
+    setSubmitting(false);
     localStorage.setItem(KEY_CLAIMED, JSON.stringify(rec));
     localStorage.removeItem(KEY_PROGRESS);
     setClaimedRec(rec);
     setPhase("claimed");
-    fetch("/api/apply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rec),
-      keepalive: true,
-    }).catch(() => {});
   };
 
   /* ---------- staff hold-to-redeem ---------- */
@@ -200,7 +218,17 @@ export default function Home() {
     localStorage.setItem(KEY_REDEEMED, JSON.stringify({ time }));
     setRedeemedAt(time);
     setPhase("redeemed");
-  }, []);
+    // Record the hand-out server-side, without making staff wait on it.
+    const rec = claimedRec ?? read<ClaimedRec>(KEY_CLAIMED);
+    if (rec) {
+      fetch("/api/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: rec.name, email: rec.email, time }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, [claimedRec]);
 
   const holdStart = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -355,6 +383,7 @@ export default function Home() {
           title="Where do we reach you?"
           label="Email"
           buttonText="SUBMIT"
+          busy={submitting}
           errMsg={err?.field === "email" ? err.msg : null}
           onSubmit={submit}
           inputRef={emailRef}
@@ -469,6 +498,7 @@ function QuestionStep({
   title,
   label,
   buttonText,
+  busy,
   errMsg,
   onSubmit,
   inputRef,
@@ -478,6 +508,7 @@ function QuestionStep({
   title: string;
   label: string;
   buttonText: string;
+  busy?: boolean;
   errMsg: string | null;
   onSubmit: () => void;
   inputRef: RefObject<HTMLInputElement | null>;
@@ -520,9 +551,10 @@ function QuestionStep({
         </p>
         <button
           type="submit"
-          className="mt-3 h-[48px] w-full cursor-pointer rounded-[8px] bg-brand text-[13px] font-bold tracking-[.15em] text-white transition hover:brightness-110 active:scale-[.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+          disabled={busy}
+          className="mt-3 h-[48px] w-full cursor-pointer rounded-[8px] bg-brand text-[13px] font-bold tracking-[.15em] text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
         >
-          {buttonText}
+          {busy ? "SUBMITTING…" : buttonText}
         </button>
       </form>
     </section>
