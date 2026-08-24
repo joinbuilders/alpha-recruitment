@@ -19,7 +19,10 @@
   - [ ] **Verify the social URLs in `app/api/apply/confirmation-email.ts`** — Instagram/website/LinkedIn are guessed from the `joinbuilders` GitHub org name
   - [ ] Test: submit the form and check the email lands, then check `public.email_errors` stays empty (try a bounce with `bounced@resend.dev` if curious)
 
-## Ideas / open decisions (not started)
-
-- [ ] Server-side redemption tracking: staff "hold to redeem" is localStorage-only today — nothing is recorded in Supabase when an item is handed out
-- [ ] Duplicate-claim protection across devices (e.g. unique index on lower(email)) — currently double-claim is only blocked per device
+- [ ] Redemption tracking + cross-device dedupe — done 2026-08-23, ship the code:
+  - [x] Migration applied to alpha_recruitment (`supabase/migrations/20260823210000_redemption_tracking.sql`, kept in-repo as the schema record): `applications.redeemed_at`, unique index on `lower(email)`, and the `redeem_application` security-definer RPC (anon stays insert-only on the table; RPC execute is anon-only). All three RPC paths + the 23505 duplicate rejection tested against prod, test rows deleted
+  - [x] One pre-existing duplicate removed before indexing: abu-romeh.3@osu.edu had two identical rows 36s apart; kept the earlier (id 67), deleted id 68
+  - [x] `/api/apply` returns 409 on duplicate email; form waits for the server, shows "That email already claimed — see a Builders team member", but still claims optimistically if the server is unreachable (offline/timeout → don't strand applicants on venue Wi-Fi)
+  - [x] Staff hold-to-redeem fires `/api/redeem` (fire-and-forget) → RPC stamps `redeemed_at`, or inserts a pre-redeemed row if the claim never reached the server
+  - Security advisors: 1 intentional WARN (anon can execute the security-definer RPC — that's the design; the alternative was granting anon UPDATE on the table). Was previously fully clean
+  - [ ] Ship it: deploy this branch — schema is live and backward-compatible with the code currently in production

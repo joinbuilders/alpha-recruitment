@@ -1,22 +1,8 @@
 import { after } from "next/server";
 
+import { parseApplication } from "../application";
 import { getSupabase } from "../supabase";
 import { sendConfirmationEmail } from "./confirmation-email";
-
-// Mirrors the client-side checks and the DB constraints on public.applications,
-// so anything accepted here can't fail the table's CHECKs.
-function parseApplication(data: unknown) {
-  if (typeof data !== "object" || data === null) return null;
-  const { name, email, time } = data as Record<string, unknown>;
-  if (typeof name !== "string" || typeof email !== "string") return null;
-  const cleanName = name.trim();
-  const cleanEmail = email.trim();
-  if (!cleanName || cleanName.length > 200) return null;
-  if (!/.+@.+\..+/.test(cleanEmail) || cleanEmail.length > 320) return null;
-  const claimedAt =
-    typeof time === "string" && !Number.isNaN(Date.parse(time)) ? time : null;
-  return { name: cleanName, email: cleanEmail, claimed_at: claimedAt };
-}
 
 export async function POST(request: Request) {
   let data: unknown;
@@ -36,6 +22,11 @@ export async function POST(request: Request) {
   if (db) {
     const { error } = await db.from("applications").insert(application);
     if (error) {
+      // Unique violation on lower(email): this email already claimed on
+      // another device. Skip the webhook and email too — not a new applicant.
+      if (error.code === "23505") {
+        return Response.json({ ok: false, duplicate: true }, { status: 409 });
+      }
       console.error("supabase insert failed:", error);
     } else {
       stored = true;
