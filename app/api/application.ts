@@ -1,4 +1,4 @@
-// Mirrors the client-side checks and the DB constraints on public.applications,
+// Mirrors the client-side checks and the DB constraints on public.interest,
 // so anything accepted here can't fail the table's CHECKs. Shared by /api/apply
 // and /api/redeem.
 export function parseApplication(data: unknown) {

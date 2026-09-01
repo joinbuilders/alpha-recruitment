@@ -3,12 +3,12 @@ import { Resend } from "resend";
 import { logEmailError } from "../supabase";
 import { BUILDERS_LOGO_PNG_BASE64 } from "./builders-logo-email";
 
-// TODO(brayden): verify these before launch — guessed from the joinbuilders GitHub org.
-// Links with an empty string are left out of the email.
+// Website + LinkedIn confirmed by Brayden, Instagram by the OSU student-org
+// directory (2026-09-01). Links with an empty string are left out of the email.
 const LINKS = [
   { label: "Instagram", url: "https://instagram.com/joinbuilders" },
-  { label: "Website", url: "https://joinbuilders.com" },
-  { label: "LinkedIn", url: "https://linkedin.com/company/joinbuilders" },
+  { label: "Website", url: "https://joinbuilders.org" },
+  { label: "LinkedIn", url: "https://www.linkedin.com/company/buildersorg/" },
 ].filter((link) => link.url);
 
 // The resend.dev sandbox only delivers to the Resend account's own email;
