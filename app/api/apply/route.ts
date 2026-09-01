@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { parseApplication } from "../application";
 import { getSupabase } from "../supabase";
 import { sendConfirmationEmail } from "./confirmation-email";
+import { emailDomainAcceptsMail } from "./email-deliverability";
 
 export async function POST(request: Request) {
   let data: unknown;
@@ -15,6 +16,12 @@ export async function POST(request: Request) {
   const application = parseApplication(data);
   if (!application) {
     return Response.json({ ok: false }, { status: 400 });
+  }
+
+  // Well-formed but undeliverable (typo'd or nonexistent domain): reject so
+  // the applicant fixes it now, instead of a bounced confirmation later.
+  if (!(await emailDomainAcceptsMail(application.email))) {
+    return Response.json({ ok: false, invalidEmail: true }, { status: 422 });
   }
 
   let stored = false;
