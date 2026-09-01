@@ -176,7 +176,7 @@ export default function Home() {
     if (submitting) return;
     if (read(KEY_REDEEMED) || read(KEY_CLAIMED)) return; // hard block on double-claim
     if (!name.trim()) return setPhase("name");
-    if (!/.+@.+\..+/.test(email.trim()))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
       return setErr({ field: "email", msg: "That email doesn't look right." });
     const rec: ClaimedRec = {
       name: name.trim(),
@@ -199,6 +199,14 @@ export default function Home() {
         return setErr({
           field: "email",
           msg: "That email already claimed — see a Builders team member.",
+        });
+      }
+      // Server checked DNS: the domain can't receive mail, so it's a typo.
+      if (res.status === 422) {
+        setSubmitting(false);
+        return setErr({
+          field: "email",
+          msg: "We can't deliver to that address — check for typos.",
         });
       }
     } catch {
