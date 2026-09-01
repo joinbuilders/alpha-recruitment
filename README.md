@@ -12,18 +12,7 @@ Visit `/?reset=1` to wipe a device's state (seen-film flag, in-progress answers,
 
 ## Where submissions go
 
-The form POSTs `{name, email, time}` to `/api/apply`, which forwards it to `SUBMIT_WEBHOOK_URL` (see `.env.example` — copy to `.env.local`). Point it at a Google Apps Script web app that appends rows to a Sheet:
-
-```js
-function doPost(e) {
-  const row = JSON.parse(e.postData.contents);
-  SpreadsheetApp.openById("SHEET_ID").getSheets()[0]
-    .appendRow([row.name, row.email, row.time]);
-  return ContentService.createTextOutput("ok");
-}
-```
-
-Deploy in Apps Script as Web app → execute as **Me** → access **Anyone**, and put the `/exec` URL in `SUBMIT_WEBHOOK_URL`. Without it, submissions are only logged server-side.
+The form POSTs `{name, email, time}` to `/api/apply`, which inserts into `public.interest` in the **builders** Supabase project (see `.env.example` — copy to `.env.local`; the publishable key is insert-only, reads happen in the dashboard). One claim per email across all events: duplicates get a 409 and the "already claimed" message. Staff hold-to-redeem POSTs to `/api/redeem`, which stamps `redeemed_at` via the `redeem_application` RPC (see `supabase/migrations/`).
 
 After a successful submission the applicant also gets a "you're on the list" confirmation email via Resend (`app/api/apply/confirmation-email.ts`). Requires `RESEND_API_KEY` and `RESEND_FROM` (see `.env.example`); without them the email is skipped and the submission still succeeds.
 
