@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import OfflineSupport from "@/components/OfflineSupport";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,9 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <link rel="preconnect" href="https://use.typekit.net" crossOrigin="" />
       <link rel="stylesheet" href="https://use.typekit.net/kfv5cnk.css" />
       <body className={`${inter.variable} font-mono antialiased`}>
         {children}
+        <OfflineSupport />
       </body>
     </html>
   );
