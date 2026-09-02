@@ -29,7 +29,7 @@ export type OutboxItem = {
 export type Payload = { name: string; email: string; time: string };
 
 /** What happened to a claim we tried to deliver while the applicant waits. */
-export type ClaimOutcome = "recorded" | "duplicate" | "queued";
+export type ClaimOutcome = "recorded" | "duplicate" | "undeliverable" | "queued";
 
 export const KEY_OUTBOX = "bld_outbox";
 const SEND_TIMEOUT_MS = 8000;
@@ -127,6 +127,8 @@ type Outcome =
   | "duplicate"
   /** 400: the server will never accept this payload. Dropping it is the only exit. */
   | "rejected"
+  /** 422: the email's domain can't receive mail. Retrying can't change that. */
+  | "undeliverable"
   /** Network error, timeout, or a server-side fault. Keep it and retry. */
   | "failed";
 
@@ -150,6 +152,7 @@ async function deliver(item: OutboxItem): Promise<Outcome> {
   }
   if (res.ok) return "sent";
   if (res.status === 409) return "duplicate";
+  if (res.status === 422) return "undeliverable";
   if (res.status === 400) {
     console.error("outbox: server rejected", item.kind, "payload; dropping");
     return "rejected";
@@ -201,7 +204,9 @@ export async function submitApplication(rec: Payload): Promise<ClaimOutcome> {
   }
   if (outcome === "failed") return "queued";
   remove(item.id);
-  return outcome === "duplicate" ? "duplicate" : "recorded";
+  if (outcome === "duplicate") return "duplicate";
+  if (outcome === "undeliverable") return "undeliverable";
+  return "recorded";
 }
 
 /**

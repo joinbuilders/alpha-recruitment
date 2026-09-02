@@ -8,7 +8,8 @@ export function parseApplication(data: unknown) {
   const cleanName = name.trim();
   const cleanEmail = email.trim();
   if (!cleanName || cleanName.length > 200) return null;
-  if (!/.+@.+\..+/.test(cleanEmail) || cleanEmail.length > 320) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail) || cleanEmail.length > 320)
+    return null;
   const claimedAt =
     typeof time === "string" && !Number.isNaN(Date.parse(time)) ? time : null;
   return { name: cleanName, email: cleanEmail, claimed_at: claimedAt };
