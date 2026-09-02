@@ -11,6 +11,7 @@ import {
 } from "react";
 import Starfield from "@/components/Starfield";
 import BuildersLogo from "@/components/BuildersLogo";
+import { clearOutbox, queueRedemption, submitApplication } from "@/lib/outbox";
 
 const FLASH_PHRASES = [
   "Dinner Series",
@@ -72,6 +73,7 @@ export default function Home() {
       [KEY_CLAIMED, KEY_REDEEMED, KEY_PROGRESS, KEY_SEEN].forEach((k) =>
         localStorage.removeItem(k)
       );
+      clearOutbox();
       window.history.replaceState(null, "", window.location.pathname);
     }
 
@@ -103,9 +105,16 @@ export default function Home() {
 
   /* ---------- does /film.mp4 exist? ---------- */
   useEffect(() => {
-    fetch("/film.mp4", { method: "HEAD" })
-      .then((r) => setHasFilm(r.ok))
-      .catch(() => setHasFilm(false));
+    // 25 MB over venue Wi-Fi isn't worth waiting on: no connection, or a probe
+    // that can't answer in 2s, and we go straight to the application.
+    const probe =
+      navigator.onLine === false
+        ? Promise.resolve(false)
+        : fetch("/film.mp4", {
+            method: "HEAD",
+            signal: AbortSignal.timeout(2000),
+          }).then((r) => r.ok);
+    probe.then(setHasFilm).catch(() => setHasFilm(false));
   }, []);
 
   const toIntro = useCallback(() => {
@@ -183,36 +192,27 @@ export default function Home() {
       email: email.trim(),
       time: new Date().toISOString(),
     };
-    // Ask the server first so an email that already claimed on another device
-    // is caught; if the server is unreachable, claim optimistically — better a
-    // rare double hand-out than an applicant stranded on venue Wi-Fi.
+    // The answers are queued before anything is sent, so they survive a dead
+    // network and a closed tab. We wait on the server only long enough to
+    // catch an email that already claimed on another device — when it's
+    // unreachable, the claim goes through and the outbox delivers it later.
+    // Better a rare double hand-out than an applicant stranded on venue Wi-Fi.
     setSubmitting(true);
-    try {
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(rec),
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.status === 409) {
-        setSubmitting(false);
-        return setErr({
-          field: "email",
-          msg: "That email already claimed — see a Builders team member.",
-        });
-      }
-      // Server checked DNS: the domain can't receive mail, so it's a typo.
-      if (res.status === 422) {
-        setSubmitting(false);
-        return setErr({
-          field: "email",
-          msg: "We can't deliver to that address — check for typos.",
-        });
-      }
-    } catch {
-      // offline or timed out — fall through to the optimistic claim
-    }
+    const outcome = await submitApplication(rec);
     setSubmitting(false);
+    if (outcome === "duplicate") {
+      return setErr({
+        field: "email",
+        msg: "That email already claimed — see a Builders team member.",
+      });
+    }
+    // Server checked DNS: the domain can't receive mail, so it's a typo.
+    if (outcome === "undeliverable") {
+      return setErr({
+        field: "email",
+        msg: "We can't deliver to that address — check for typos.",
+      });
+    }
     localStorage.setItem(KEY_CLAIMED, JSON.stringify(rec));
     localStorage.removeItem(KEY_PROGRESS);
     setClaimedRec(rec);
@@ -226,16 +226,11 @@ export default function Home() {
     localStorage.setItem(KEY_REDEEMED, JSON.stringify({ time }));
     setRedeemedAt(time);
     setPhase("redeemed");
-    // Record the hand-out server-side, without making staff wait on it.
+    // Record the hand-out server-side, without making staff wait on it. The
+    // outbox retries until it lands, so a redemption in a dead corner of the
+    // room still shows up in Supabase.
     const rec = claimedRec ?? read<ClaimedRec>(KEY_CLAIMED);
-    if (rec) {
-      fetch("/api/redeem", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: rec.name, email: rec.email, time }),
-        keepalive: true,
-      }).catch(() => {});
-    }
+    if (rec) queueRedemption({ name: rec.name, email: rec.email, time });
   }, [claimedRec]);
 
   const holdStart = (e: React.PointerEvent) => {
